@@ -8,3 +8,4 @@ rand = "0.8.5"
 uuid = { version = "1.4.1", features = ["v4"] }
 clap = { version = "4.4.6", features = ["derive"] }
 prettytable-rs = "0.10.0"
+terminal_size = "0.2.6"

@@ -1,10 +1,10 @@
 # Randr - Random String Generator
 
-A Rust library for generating various types of random strings.
+A command-line tool for generating various types of random strings.
 
 ## Features
 
-Randr provides functions to generate the following types of random strings:
+Randr provides the following random string formats:
 
 1. **UUID** - Universally Unique Identifiers (v4)
 2. **URL** - URL-safe random strings
@@ -23,81 +23,51 @@ Randr provides functions to generate the following types of random strings:
 
 ## Usage
 
-Add this to your `Cargo.toml`:
+### Building
 
-```toml
-[dependencies]
-randr = "0.1.0"
+```bash
+# Clone the repository
+git clone https://github.com/yourusername/randr.git
+cd randr
+
+# Build the project
+cargo build --release
+
+# Run the application
+cargo run
 ```
 
 ### Command Line Usage
 
 ```bash
 # Show all random string formats in a tabular layout
-cargo run
+randr
 
-# Generate a specific format (3 examples)
-cargo run -- uuid
-cargo run -- name
-cargo run -- food
-cargo run -- sports
+# Generate 30 examples of a specific format
+randr uuid
+randr name
+randr food
+randr sports
 ```
 
-### Example Code
+## Examples
 
-```rust
-use randr;
-use randr::RandomFormat;
+### UUID Format
 
-fn main() {
-    // Generate a UUID
-    let uuid = randr::uuid();
-    println!("UUID: {}", uuid);
-
-    // Generate a URL-safe random string
-    let url_safe = randr::url_safe(16);
-    println!("URL: {}", url_safe);
-
-    // Generate an API key
-    let api_key = randr::api_key(24);
-    println!("API: {}", api_key);
-
-    // Generate a memorable name
-    let name = randr::memorable_name();
-    println!("NAME: {}", name);
-
-    // Generate using the enum
-    let element = randr::generate(RandomFormat::ScientificElement);
-    println!("ELEMENT: {}", element);
-}
+```
+┌──────────────────────────────────────────────────────────────────────────────────────────┐
+│ 32d76965-7e57-42f4-8881-fd40fb010856   9896453c-1609-47fc-9743-d7b5cc39e6d8   695bc83b-bfdd-4010-8ee9-061f159160ac │
+│ 563ad6b7-e280-4419-9b9d-d43d72b22234   914140ce-2bd1-4b6b-96d1-0117085e2b80   bb3dc8a5-94d3-4438-a266-2905df88a254 │
+│ 00dd88f8-246a-4c49-811e-5cce40f9cbc1   47c168f5-b3f1-4727-af62-367efd8b2736   0e0c53c0-8aed-4bea-b7e3-ac70f91bd89f │
+└──────────────────────────────────────────────────────────────────────────────────────────┘
 ```
 
-## API Reference
+### NAME Format
 
-### Basic Functions
-
-- `uuid() -> String` - Generate a UUID (Universally Unique Identifier)
-- `url_safe(length: usize) -> String` - Generate a URL-safe random string
-- `api_key(length: usize) -> String` - Generate a random string suitable for API keys
-
-### Named Formats
-
-- `memorable_name() -> String` - Generate a memorable name like "happy-elephant-42"
-- `historical_figure() -> String` - Generate a historical figure name like "einstein-42"
-- `geographic_name() -> String` - Generate a geographic name like "paris-xj29"
-- `character_name() -> String` - Generate a character name like "gandalf-7h2"
-- `phonetic_alphabet() -> String` - Generate a phonetic alphabet ID like "alpha-bravo-charlie-42"
-- `rhyming_pair() -> String` - Generate a rhyming pair like "cat-hat-42"
-- `musical_term() -> String` - Generate a musical term ID like "allegro-forte-56"
-- `scientific_element() -> String` - Generate a scientific element ID like "carbon-oxygen-42"
-- `constellation_name() -> String` - Generate a constellation name like "orion-a7b"
-- `sports_reference() -> String` - Generate a sports reference like "touchdown-95"
-- `food_combination() -> String` - Generate a food combination like "spicy-taco-45"
-
-### Generic Function
-
-- `generate(format: RandomFormat) -> String` - Generate a random string based on the specified format
-
-## License
-
-This project is licensed under the MIT License - see the LICENSE file for details.
+```
+┌─────────────────────────────────────────────────────────────┐
+│ fierce-village-24    jolly-wolf-80       smiling-unicorn-51 │
+│ bold-city-28         swift-tower-62      bright-garden-8    │
+│ jolly-phoenix-98     humble-garden-3     curious-wolf-96    │
+└─────────────────────────────────────────────────────────────┘
+```
