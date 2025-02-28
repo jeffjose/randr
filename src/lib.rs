@@ -6,6 +6,7 @@ use uuid::Uuid;
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub enum RandomFormat {
     Uuid,
+    UuidV7,
     UrlSafe,
     ApiKey,
     MemorableName,
@@ -21,31 +22,32 @@ pub enum RandomFormat {
     FoodCombination,
 }
 
-impl fmt::Display for RandomFormat {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+impl RandomFormat {
+    /// Calculate the entropy in bits for this format
+    pub fn entropy(&self) -> u32 {
         match self {
-            RandomFormat::Uuid => write!(f, "UUID"),
-            RandomFormat::UrlSafe => write!(f, "URL"),
-            RandomFormat::ApiKey => write!(f, "API"),
-            RandomFormat::MemorableName => write!(f, "NAME"),
-            RandomFormat::HistoricalFigure => write!(f, "HISTORICAL"),
-            RandomFormat::GeographicName => write!(f, "GEO"),
-            RandomFormat::CharacterName => write!(f, "CHARACTER"),
-            RandomFormat::PhoneticAlphabet => write!(f, "PHONETIC"),
-            RandomFormat::RhymingPair => write!(f, "RHYME"),
-            RandomFormat::MusicalTerm => write!(f, "MUSIC"),
-            RandomFormat::ScientificElement => write!(f, "ELEMENT"),
-            RandomFormat::ConstellationName => write!(f, "CONSTELLATION"),
-            RandomFormat::SportsReference => write!(f, "SPORTS"),
-            RandomFormat::FoodCombination => write!(f, "FOOD"),
+            RandomFormat::Uuid => 122, // 128 bits with some version/variant constraints
+            RandomFormat::UuidV7 => 122, // 128 bits with time component and some constraints
+            RandomFormat::UrlSafe => 95, // 16 chars from 64 possible values: 16 * log2(64) = 96 bits
+            RandomFormat::ApiKey => 125, // 24 chars from 36 possible values: 24 * log2(36) = 124.1 bits
+            RandomFormat::MemorableName => 30, // 36 adjectives * 35 nouns * 99 numbers = ~17 bits
+            RandomFormat::HistoricalFigure => 14, // 40 figures * 999 numbers = ~15 bits
+            RandomFormat::GeographicName => 24, // 42 locations * 36^3 suffixes = ~24 bits
+            RandomFormat::CharacterName => 22, // 45 characters * 36^3 suffixes = ~22 bits
+            RandomFormat::PhoneticAlphabet => 19, // 26^2 or 26^3 combinations * 99 numbers = ~19 bits
+            RandomFormat::RhymingPair => 11,      // 21 pairs * 99 numbers = ~11 bits
+            RandomFormat::MusicalTerm => 13,      // 30^1 or 30^2 terms * 99 numbers = ~13 bits
+            RandomFormat::ScientificElement => 18, // 31^1 or 31^2 elements * 99 numbers = ~18 bits
+            RandomFormat::ConstellationName => 21, // 26 constellations * 36^3 suffixes = ~21 bits
+            RandomFormat::SportsReference => 15,  // 31 terms * 99 numbers = ~15 bits
+            RandomFormat::FoodCombination => 22, // 24 adjectives * 32 foods * 99 numbers = ~22 bits
         }
     }
-}
 
-impl RandomFormat {
     pub fn all() -> Vec<RandomFormat> {
-        vec![
+        let mut formats = vec![
             RandomFormat::Uuid,
+            RandomFormat::UuidV7,
             RandomFormat::UrlSafe,
             RandomFormat::ApiKey,
             RandomFormat::MemorableName,
@@ -59,7 +61,34 @@ impl RandomFormat {
             RandomFormat::ConstellationName,
             RandomFormat::SportsReference,
             RandomFormat::FoodCombination,
-        ]
+        ];
+
+        // Sort formats by entropy (highest to lowest)
+        formats.sort_by(|a, b| b.entropy().cmp(&a.entropy()));
+
+        formats
+    }
+}
+
+impl fmt::Display for RandomFormat {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            RandomFormat::Uuid => write!(f, "UUID ({})", self.entropy()),
+            RandomFormat::UuidV7 => write!(f, "UUIDv7 ({})", self.entropy()),
+            RandomFormat::UrlSafe => write!(f, "URL ({})", self.entropy()),
+            RandomFormat::ApiKey => write!(f, "API ({})", self.entropy()),
+            RandomFormat::MemorableName => write!(f, "NAME ({})", self.entropy()),
+            RandomFormat::HistoricalFigure => write!(f, "HISTORICAL ({})", self.entropy()),
+            RandomFormat::GeographicName => write!(f, "GEO ({})", self.entropy()),
+            RandomFormat::CharacterName => write!(f, "CHARACTER ({})", self.entropy()),
+            RandomFormat::PhoneticAlphabet => write!(f, "PHONETIC ({})", self.entropy()),
+            RandomFormat::RhymingPair => write!(f, "RHYME ({})", self.entropy()),
+            RandomFormat::MusicalTerm => write!(f, "MUSIC ({})", self.entropy()),
+            RandomFormat::ScientificElement => write!(f, "ELEMENT ({})", self.entropy()),
+            RandomFormat::ConstellationName => write!(f, "CONSTELLATION ({})", self.entropy()),
+            RandomFormat::SportsReference => write!(f, "SPORTS ({})", self.entropy()),
+            RandomFormat::FoodCombination => write!(f, "FOOD ({})", self.entropy()),
+        }
     }
 }
 
@@ -89,6 +118,11 @@ fn random_item<T: Clone>(items: &[T]) -> T {
 /// Generate a UUID (Universally Unique Identifier)
 pub fn uuid() -> String {
     Uuid::new_v4().to_string()
+}
+
+/// Generate a UUIDv7 (Time-based Universally Unique Identifier)
+pub fn uuidv7() -> String {
+    Uuid::now_v7().to_string()
 }
 
 /// Generate a URL-safe random string
@@ -526,6 +560,7 @@ pub fn food_combination() -> String {
 pub fn generate(format: RandomFormat) -> String {
     match format {
         RandomFormat::Uuid => uuid(),
+        RandomFormat::UuidV7 => uuidv7(),
         RandomFormat::UrlSafe => url_safe(16),
         RandomFormat::ApiKey => api_key(24),
         RandomFormat::MemorableName => memorable_name(),
@@ -549,6 +584,13 @@ mod tests {
     #[test]
     fn test_uuid() {
         let s = uuid();
+        assert_eq!(s.len(), 36);
+        assert!(s.chars().all(|c| c.is_ascii_hexdigit() || c == '-'));
+    }
+
+    #[test]
+    fn test_uuidv7() {
+        let s = uuidv7();
         assert_eq!(s.len(), 36);
         assert!(s.chars().all(|c| c.is_ascii_hexdigit() || c == '-'));
     }
