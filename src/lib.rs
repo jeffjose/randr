@@ -1,3 +1,4 @@
+use rand::seq::SliceRandom;
 use rand::Rng;
 use std::fmt;
 use uuid::Uuid;
@@ -41,6 +42,27 @@ impl RandomFormat {
             RandomFormat::ConstellationName => 21, // 26 constellations * 36^3 suffixes = ~21 bits
             RandomFormat::SportsReference => 15,  // 31 terms * 99 numbers = ~15 bits
             RandomFormat::FoodCombination => 22, // 24 adjectives * 32 foods * 99 numbers = ~22 bits
+        }
+    }
+
+    /// Short canonical name used for CLI arguments and menu labels.
+    pub fn short_name(&self) -> &'static str {
+        match self {
+            RandomFormat::Uuid => "uuid",
+            RandomFormat::UuidV7 => "uuidv7",
+            RandomFormat::UrlSafe => "url",
+            RandomFormat::ApiKey => "api",
+            RandomFormat::MemorableName => "name",
+            RandomFormat::HistoricalFigure => "historical",
+            RandomFormat::GeographicName => "geo",
+            RandomFormat::CharacterName => "character",
+            RandomFormat::PhoneticAlphabet => "phonetic",
+            RandomFormat::RhymingPair => "rhyme",
+            RandomFormat::MusicalTerm => "music",
+            RandomFormat::ScientificElement => "element",
+            RandomFormat::ConstellationName => "constellation",
+            RandomFormat::SportsReference => "sports",
+            RandomFormat::FoodCombination => "food",
         }
     }
 
@@ -103,16 +125,112 @@ fn from_charset(length: usize, charset: &str) -> String {
         .collect()
 }
 
-/// Generate a random number as a string
-fn random_number(min: u32, max: u32) -> String {
-    let mut rng = rand::thread_rng();
-    rng.gen_range(min..=max).to_string()
-}
-
 /// Pick a random item from a slice
 fn random_item<T: Clone>(items: &[T]) -> T {
     let mut rng = rand::thread_rng();
     items[rng.gen_range(0..items.len())].clone()
+}
+
+fn capitalize(s: &str) -> String {
+    let mut chars = s.chars();
+    match chars.next() {
+        Some(c) => c.to_uppercase().collect::<String>() + chars.as_str(),
+        None => String::new(),
+    }
+}
+
+/// ~1-in-4 calls swaps some letters for visually similar digits (leetspeak).
+/// When it fires, each eligible letter has a 50% chance of substitution, so
+/// the result varies from "barely touched" to "heavily leeted".
+fn maybe_leetify<R: Rng>(s: &str, rng: &mut R) -> String {
+    if !rng.gen_bool(0.25) {
+        return s.to_string();
+    }
+    s.chars()
+        .map(|c| {
+            let sub = match c.to_ascii_lowercase() {
+                'a' => Some('4'),
+                'e' => Some('3'),
+                'i' => Some('1'),
+                'o' => Some('0'),
+                's' => Some('5'),
+                't' => Some('7'),
+                'g' => Some('9'),
+                'l' => Some('1'),
+                'b' => Some('8'),
+                _ => None,
+            };
+            match sub {
+                Some(d) if rng.gen_bool(0.5) => d,
+                _ => c,
+            }
+        })
+        .collect()
+}
+
+/// Render a wordlist-based identifier with randomized separator, per-word
+/// capitalization, a random tag placed at a random position, optional
+/// mixed-separator between body and tag, and optional leetspeak — so the
+/// structural shape itself isn't a fingerprint.
+fn render_with_words(words: &[&str]) -> String {
+    let mut rng = rand::thread_rng();
+
+    // Per-word case (each word independently lower / Title / UPPER)
+    let cased: Vec<String> = words
+        .iter()
+        .map(|w| match rng.gen_range(0..3) {
+            1 => capitalize(w),
+            2 => w.to_uppercase(),
+            _ => w.to_lowercase(),
+        })
+        .collect();
+
+    // Body separator: empty only with mixed case, otherwise "boldgarden" blurs.
+    let has_caps = cased
+        .iter()
+        .any(|w| w.chars().any(|c| c.is_uppercase()));
+    let body_sep_options: &[&str] = if has_caps {
+        &["-", "_", ".", ""]
+    } else {
+        &["-", "_", "."]
+    };
+    let body_sep = *body_sep_options.choose(&mut rng).unwrap();
+
+    // Tag separator: independently picked, can differ from body sep — this is
+    // what produces strings like "Bold_garden42" (body "_", tag glue "").
+    let tag_sep = *["-", "_", ".", ""].choose(&mut rng).unwrap();
+
+    // Random tag, varied charset + length.
+    let alnum = "abcdefghijklmnopqrstuvwxyz0123456789";
+    let alpha = "abcdefghijklmnopqrstuvwxyz";
+    let digits = "0123456789";
+    let hex = "0123456789abcdef";
+    let tag = match rng.gen_range(0..5) {
+        0 => {
+            let max = [9u32, 99, 999, 9999][rng.gen_range(0..4)];
+            rng.gen_range(1..=max).to_string()
+        }
+        1 => from_charset(rng.gen_range(2..=5), alnum),
+        2 => from_charset(rng.gen_range(2..=4), alpha),
+        3 => from_charset(rng.gen_range(3..=6), hex),
+        _ => from_charset(rng.gen_range(2..=5), digits),
+    };
+
+    // Place the tag: 0 = prefix, cased.len() = suffix, anything between = wedged.
+    let pos = rng.gen_range(0..=cased.len());
+    let assembled = if cased.is_empty() {
+        tag
+    } else if pos == 0 {
+        format!("{}{}{}", tag, tag_sep, cased.join(body_sep))
+    } else if pos == cased.len() {
+        format!("{}{}{}", cased.join(body_sep), tag_sep, tag)
+    } else {
+        let left = cased[..pos].join(body_sep);
+        let right = cased[pos..].join(body_sep);
+        format!("{}{}{}{}{}", left, tag_sep, tag, tag_sep, right)
+    };
+
+    maybe_leetify(&assembled, &mut rng)
 }
 
 /// Generate a UUID (Universally Unique Identifier)
@@ -153,12 +271,7 @@ pub fn memorable_name() -> String {
         "dragon", "phoenix", "unicorn", "wizard", "knight", "warrior",
     ];
 
-    format!(
-        "{}-{}-{}",
-        random_item(&adjectives),
-        random_item(&nouns),
-        random_number(1, 99)
-    )
+    render_with_words(&[random_item(&adjectives), random_item(&nouns)])
 }
 
 /// Generate a historical figure name like "einstein-42"
@@ -205,7 +318,7 @@ pub fn historical_figure() -> String {
         "mandela",
     ];
 
-    format!("{}-{}", random_item(&figures), random_number(1, 999))
+    render_with_words(&[random_item(&figures)])
 }
 
 /// Generate a geographic name like "paris-xj29"
@@ -255,9 +368,7 @@ pub fn geographic_name() -> String {
         "petra",
     ];
 
-    let suffix = from_charset(3, "abcdefghijklmnopqrstuvwxyz0123456789");
-
-    format!("{}-{}", random_item(&locations), suffix)
+    render_with_words(&[random_item(&locations)])
 }
 
 /// Generate a character name like "gandalf-7h2"
@@ -310,9 +421,7 @@ pub fn character_name() -> String {
         "moana",
     ];
 
-    let suffix = from_charset(3, "abcdefghijklmnopqrstuvwxyz0123456789");
-
-    format!("{}-{}", random_item(&characters), suffix)
+    render_with_words(&[random_item(&characters)])
 }
 
 /// Generate a phonetic alphabet ID like "alpha-bravo-charlie-42"
@@ -325,13 +434,8 @@ pub fn phonetic_alphabet() -> String {
 
     let mut rng = rand::thread_rng();
     let count = rng.gen_range(2..=3);
-
-    let mut words = Vec::with_capacity(count);
-    for _ in 0..count {
-        words.push(random_item(&phonetics));
-    }
-
-    format!("{}-{}", words.join("-"), random_number(1, 99))
+    let words: Vec<&str> = (0..count).map(|_| random_item(&phonetics)).collect();
+    render_with_words(&words)
 }
 
 /// Generate a rhyming pair like "cat-hat-42"
@@ -361,8 +465,7 @@ pub fn rhyming_pair() -> String {
     ];
 
     let (first, second) = random_item(&pairs);
-
-    format!("{}-{}-{}", first, second, random_number(1, 99))
+    render_with_words(&[first, second])
 }
 
 /// Generate a musical term ID like "allegro-forte-56"
@@ -402,13 +505,8 @@ pub fn musical_term() -> String {
 
     let mut rng = rand::thread_rng();
     let count = rng.gen_range(1..=2);
-
-    let mut words = Vec::with_capacity(count);
-    for _ in 0..count {
-        words.push(random_item(&terms));
-    }
-
-    format!("{}-{}", words.join("-"), random_number(1, 99))
+    let words: Vec<&str> = (0..count).map(|_| random_item(&terms)).collect();
+    render_with_words(&words)
 }
 
 /// Generate a scientific element ID like "carbon-oxygen-42"
@@ -449,13 +547,8 @@ pub fn scientific_element() -> String {
 
     let mut rng = rand::thread_rng();
     let count = rng.gen_range(1..=2);
-
-    let mut words = Vec::with_capacity(count);
-    for _ in 0..count {
-        words.push(random_item(&elements));
-    }
-
-    format!("{}-{}", words.join("-"), random_number(1, 99))
+    let words: Vec<&str> = (0..count).map(|_| random_item(&elements)).collect();
+    render_with_words(&words)
 }
 
 /// Generate a constellation name like "orion-a7b"
@@ -489,9 +582,7 @@ pub fn constellation_name() -> String {
         "aquila",
     ];
 
-    let suffix = from_charset(3, "abcdefghijklmnopqrstuvwxyz0123456789");
-
-    format!("{}-{}", random_item(&constellations), suffix)
+    render_with_words(&[random_item(&constellations)])
 }
 
 /// Generate a sports reference like "touchdown-95"
@@ -530,7 +621,7 @@ pub fn sports_reference() -> String {
         "midfielder",
     ];
 
-    format!("{}-{}", random_item(&terms), random_number(1, 99))
+    render_with_words(&[random_item(&terms)])
 }
 
 /// Generate a food combination like "spicy-taco-45"
@@ -548,12 +639,7 @@ pub fn food_combination() -> String {
         "syrup", "honey", "jam",
     ];
 
-    format!(
-        "{}-{}-{}",
-        random_item(&adjectives),
-        random_item(&foods),
-        random_number(1, 99)
-    )
+    render_with_words(&[random_item(&adjectives), random_item(&foods)])
 }
 
 /// Generate a random string based on the specified format
