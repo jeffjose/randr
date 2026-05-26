@@ -1,36 +1,67 @@
 # randr — quick random strings
 
-A CLI that hands you a short, varied menu of random strings to pick from. Designed so that no two outputs look like they came from the same person — useful when you want screen names, handles, or labels that can't be visually linked to each other.
+A CLI that gives you grids of random strings to pick from. **Within a section** the style is uniform (same separator/case/tag shape) so you can scan candidates of one "feel" — **across sections** the format and style change, so different sections look like they came from different people.
 
 ## How it works
 
-Run `randr` with no arguments and you get 5 picks, each from a different style/theme category. The structural shape (separator, capitalization, suffix length) is also randomized per call, so two outputs side-by-side don't share a "fingerprint":
+Run `randr` with no arguments and you get 5 themed sections, each laid out as a grid sized to your terminal:
 
 ```text
- 1  uuidv7         019e62ac-2f22-7f93-a169-541bb660b27a
- 2  url            cf4yMdy2_6iCoryW
- 3  name           LIVELY-BRIDGE-3ba2
- 4  constellation  hydra-727
- 5  historical     Rembrandt.7bta
+id (uuidv7)
+  019e62bd-5713-7043-99c1-9582e2eba8d2  019e62bd-5713-7043-99c1-9599435e19df
+  019e62bd-5713-7043-99c1-95a8e389f194  019e62bd-5713-7043-99c1-95bcec49ab6d
+  019e62bd-5713-7043-99c1-95c651f0ffe2  019e62bd-5713-7043-99c1-95d5aed8edb2
+
+token (api)
+  7U6W8FI6BVQIJIV84N7WAERB  9LKD3ISEPC08JSKT523Q4TFT  6GB9SYJXTN6MY6TTP6ZNYLTO
+  UX2XWRCXC85Q88N3PYHK5K0Z  BH84DYT5ADDWXG3IVT1L59FY  7GUTMHNU77MC72N8B7YJIETG
+
+memorable (name)
+  hrew.PeacefulPlanet  rdjj.HumbleBridge   wsly.PeacefulUniverse
+  xulf.GentlePhoenix   zrcw.EagerElephant  nctl.RunningMountain
+
+place (geo)
+  SYDNEY-76706  THAMES-11650  GANGES-64597  CAIRO-22297
+  ANDES-97411   TOKYO-53700   SANTORINI-32492  ALPS-37916
+
+character (character)
+  W00DY.2568  W0NDERW0MAN.1793  B0W53R.904  IRONMAN.8341
+  BATMAN.7    KENOB1.288        81180.3750  S4UR0N.6
 ```
 
-Categories (one format sampled from each per run): `id` (uuid/uuidv7), `token` (url/api), `memorable` (name/food), `place` (geo/constellation), `character` (character/historical).
+Each row of the output is a different theme group. Within a group, every candidate uses the same locked style — only the words differ. Rerun to roll a new format/style per section.
 
-Pass a name to get more of one format:
+Themes and the formats they sample from:
+
+- **id**: uuid, uuidv7
+- **token**: url, api
+- **memorable**: name (adjective+noun), food
+- **place**: geo, constellation
+- **character**: character, historical
+
+Pass a name to focus on one format — it generates many candidates, all in one locked style (rerun for a different style):
 
 ```bash
-randr name        # 10 by default
-randr geo -n 20
-randr uuidv7
+randr name
+randr food
+randr geo
+randr name -n 40
 ```
 
-Even within a single format, each call randomizes separator (`-` / `_` / `.` / none), capitalization (lower / Title / UPPER), and suffix shape (digits / letters / hex / alphanumeric, length 2–6) — so `randr name -n 5` looks like five different people, not one person's pattern.
+## Style axes (rolled once per section / per `randr <format>` call)
+
+- separator: `-` / `_` / `.` / none
+- case: lower / Title / UPPER
+- tag position: prefix / between words / suffix
+- tag shape: small int / digits / letters / hex / alphanumeric, length 2–6
+- mixed body/tag separators (e.g. `Bold_garden42`)
+- leetspeak: ~1-in-4 sections leetify (`a→4`, `e→3`, `o→0`, …)
 
 ## Available formats
 
-- **ID/token:** `uuid`, `uuidv7`, `url`, `api`
-- **Memorable:** `name`, `food`, `geo`, `constellation`, `character`, `historical`
-- **Other (lower-entropy, not in default menu):** `phonetic`, `rhyme`, `music`, `element`, `sports`
+- ID/token: `uuid`, `uuidv7`, `url`, `api`
+- Memorable: `name`, `food`, `geo`, `constellation`, `character`, `historical`
+- Other (lower-entropy, not in default menu): `phonetic`, `rhyme`, `music`, `element`, `sports`
 
 ## Build
 
