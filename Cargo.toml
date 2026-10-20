@@ -8,3 +8,6 @@ rand = "0.8.5"
 uuid = { version = "1.4.1", features = ["v4", "v7"] }
 clap = { version = "4.4.6", features = ["derive"] }
 terminal_size = "0.2.6"
+
+[build-dependencies]
+vergen-gitcl = "10.0.3"

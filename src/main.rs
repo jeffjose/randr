@@ -1,10 +1,31 @@
 use clap::Parser;
 use rand::seq::SliceRandom;
 use randr::{self, RandomFormat, Style};
+use std::sync::OnceLock;
 use terminal_size::{terminal_size, Width};
 
+/// The version and the commit it was built from: `0.1.0-abc1234`, with
+/// `-dirty` if the tree had changes not committed.
+fn version() -> &'static str {
+    static VERSION: OnceLock<String> = OnceLock::new();
+    VERSION.get_or_init(|| {
+        // Unset where git could not be asked, or vergen's stand-in.
+        let Some(sha) =
+            option_env!("VERGEN_GIT_SHA").filter(|sha| !sha.is_empty() && !sha.contains("VERGEN"))
+        else {
+            return env!("CARGO_PKG_VERSION").to_string();
+        };
+        let dirty = if option_env!("VERGEN_GIT_DIRTY") == Some("true") {
+            "-dirty"
+        } else {
+            ""
+        };
+        format!("{}-{sha}{dirty}", env!("CARGO_PKG_VERSION"))
+    })
+}
+
 #[derive(Parser)]
-#[command(author, version, about, long_about = None)]
+#[command(author, version = version(), about, long_about = None)]
 struct Cli {
     /// Specific format to generate. Omit to get the themed menu.
     format: Option<String>,
